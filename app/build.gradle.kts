@@ -11,12 +11,16 @@ android {
         applicationId = "com.dere3046.checkarb"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "7.1"
+        versionCode = 85
+        versionName = "8.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
         }
     }
 
@@ -31,6 +35,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            isDebuggable = true
         }
     }
 
@@ -55,6 +60,9 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 
@@ -70,6 +78,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.browser:browser:1.6.0")
     implementation("com.github.topjohnwu:libsu:5.0.5")
     implementation("com.google.android.material:material:1.11.0")
     testImplementation("junit:junit:4.13.2")
@@ -79,4 +88,13 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+android.applicationVariants.all {
+    val variant = this
+    variant.outputs.all {
+        val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+        val outputFileName = "checkARB-${variant.versionName}-${variant.buildType.name}.apk"
+        output.outputFileName = outputFileName
+    }
 }

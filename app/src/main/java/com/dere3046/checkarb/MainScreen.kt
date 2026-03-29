@@ -1,194 +1,258 @@
+// MainScreen.kt
 package com.dere3046.checkarb
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
-import com.dere3046.checkarb.data.SettingsRepository
+import com.dere3046.checkarb.ui.components.DataCard
+import com.dere3046.checkarb.ui.components.DataRow
 
-sealed class BottomNavItem(
-    val route: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val titleRes: Int
-) {
-    data object Home : BottomNavItem(
-        route = "home",
-        icon = Icons.Default.Home,
-        titleRes = R.string.nav_home
-    )
-    data object Settings : BottomNavItem(
-        route = "settings",
-        icon = Icons.Default.Settings,
-        titleRes = R.string.nav_settings
-    )
-}
-
-val items = listOf(BottomNavItem.Home, BottomNavItem.Settings)
+private val BUTTON_CORNER_RADIUS = 4.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(LocalContext.current))
+) {
+    val context = LocalContext.current
     val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val hasRoot by viewModel.hasRootAccess.collectAsState()
+    val availableDevices by viewModel.availableDevices.collectAsState()
+
+    var showTargetDeviceDialogForSlot by remember { mutableStateOf<String?>(null) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showArbStatsDialog by remember { mutableStateOf(false) }
+
+    val currentRoute = navController.currentBackStackEntryFlow.collectAsState(initial = navController.currentBackStackEntry).value?.destination?.route
 
     Scaffold(
-        bottomBar = {
-            if (currentRoute == "home" || currentRoute == "settings") {
-                BottomNavigationBar(navController)
-            }
-        }
-    ) { _ ->
-        NavHost(
-            navController = navController,
-            startDestination = "home"
-        ) {
-            composable("home") { HomeScreen(navController) }
-            composable("settings") { SettingsScreen(navController = navController) }
-            composable("manual_scan") { ManualScanScreen(navController) }
-            composable("auto_scan") { AutoScanScreen(navController) }
-            composable("logs") { LogScreen(navController) }
-        }
-    }
-}
-
-@Composable
-fun BottomNavigationBar(navController: NavController) {
-    NavigationBar {
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
-        items.forEach { item ->
-            NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = null) },
-                label = { Text(stringResource(item.titleRes)) },
-                selected = currentRoute == item.route,
-                onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (currentRoute != Screen.Main.route) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(R.string.back)
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(48.dp))
                         }
-                        launchSingleTop = true
-                        restoreState = true
+                        Text(
+                            stringResource(R.string.app_name),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (currentRoute?.startsWith(Screen.Detail.route) == true) {
+                            IconButton(onClick = { viewModel.scanAllSlots() }) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = stringResource(R.string.refresh),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(48.dp))
+                        }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            AppNavigation(
+                navController = navController,
+                viewModel = viewModel,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                onNavigateToSettings = { showSettingsDialog = true },
+                onNavigateToArbStats = { showArbStatsDialog = true }
+            )
+
+            if (showSettingsDialog) {
+                SettingsDialog(
+                    onDismiss = { showSettingsDialog = false },
+                    context = context,
+                    hasRoot = hasRoot
+                )
+            }
+
+            if (showTargetDeviceDialogForSlot != null) {
+                val slot = showTargetDeviceDialogForSlot!!
+                TargetDeviceDialog(
+                    availableDevices = availableDevices,
+                    currentDevice = if (slot == "_a") viewModel.slotADevicePath.value else viewModel.slotBDevicePath.value,
+                    onSelect = { path ->
+                        viewModel.setSlotDevicePath(slot, path)
+                        showTargetDeviceDialogForSlot = null
+                    },
+                    onReset = {
+                        viewModel.resetSlotDevicePath(slot)
+                        showTargetDeviceDialogForSlot = null
+                    },
+                    onDismiss = { showTargetDeviceDialogForSlot = null }
+                )
+            }
+
+            if (showArbStatsDialog) {
+                AlertDialog(
+                    onDismissRequest = { showArbStatsDialog = false },
+                    title = { Text(stringResource(R.string.oneplus_arb_stats)) },
+                    text = { Text(stringResource(R.string.arb_stats_disclaimer)) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showArbStatsDialog = false
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                                intent.data = android.net.Uri.parse("https://oparb.pages.dev/")
+                                context.startActivity(intent)
+                            }
+                        ) {
+                            Text(stringResource(R.string.navigate))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showArbStatsDialog = false }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+        }
     }
 }
 
 @Composable
-fun HomeScreen(navController: NavController) {
-    val context = LocalContext.current
-    val repository = remember { SettingsRepository(context) }
-    val workMode by repository.workModeFlow.collectAsState(initial = WorkMode.NON_ROOT)
+fun MainScreenContent(
+    viewModel: MainViewModel,
+    onNavigateToManual: () -> Unit,
+    onNavigateToAuto: () -> Unit,
+    onNavigateToDetail: (MainViewModel.SlotInfo) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToArbStats: () -> Unit
+) {
+    val deviceInfo by viewModel.deviceInfo.collectAsState()
+    val slotA by viewModel.slotA.collectAsState()
+    val slotB by viewModel.slotB.collectAsState()
+    val isScanning by viewModel.isScanning.collectAsState()
+    val hasRoot by viewModel.hasRootAccess.collectAsState()
 
-    val isRootEnabled = workMode == WorkMode.ROOT
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center
+            .padding(16.dp)
+            .verticalScroll(scrollState)
     ) {
-        // Manual scan card (always enabled)
-        Card(
-            onClick = { navController.navigate("manual_scan") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            elevation = CardDefaults.cardElevation(4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+        DataCard(title = stringResource(R.string.device_info)) {
+            val cardWidth = remember { mutableIntStateOf(0) }
+            DataRow(stringResource(R.string.model), deviceInfo.model, mutableMaxWidth = cardWidth)
+            DataRow(stringResource(R.string.build_number), deviceInfo.buildNumber, mutableMaxWidth = cardWidth)
+            DataRow(
+                label = stringResource(R.string.kernel_version),
+                value = deviceInfo.kernelVersion,
+                mutableMaxWidth = cardWidth
             )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.manual_scan),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            if (deviceInfo.isDualSlot) {
+                DataRow(stringResource(R.string.slot_suffix), deviceInfo.activeSlot, mutableMaxWidth = cardWidth)
             }
         }
 
-        // Auto scan card - enabled only in root mode
-        Card(
-            onClick = { if (isRootEnabled) navController.navigate("auto_scan") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            elevation = CardDefaults.cardElevation(if (isRootEnabled) 4.dp else 0.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isRootEnabled) 
-                    MaterialTheme.colorScheme.primaryContainer 
-                else 
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        Spacer(Modifier.height(16.dp))
+
+        SlotCard(
+            title = stringResource(R.string.slot_a),
+            data = slotA,
+            isScanning = isScanning,
+            isActive = deviceInfo.activeSlot == "_a",
+            hasRoot = hasRoot,
+            onDetail = { onNavigateToDetail(slotA) }
+        )
+
+        if (deviceInfo.isDualSlot) {
+            Spacer(Modifier.height(16.dp))
+            SlotCard(
+                title = stringResource(R.string.slot_b),
+                data = slotB,
+                isScanning = isScanning,
+                isActive = deviceInfo.activeSlot == "_b",
+                hasRoot = hasRoot,
+                onDetail = { onNavigateToDetail(slotB) }
             )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.auto_scan),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = if (isRootEnabled) 
-                        MaterialTheme.colorScheme.onPrimaryContainer 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = if (isRootEnabled) 
-                        MaterialTheme.colorScheme.onPrimaryContainer 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-            }
         }
+
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+            onClick = onNavigateToManual
+        ) {
+            Text(stringResource(R.string.manual_scan))
+        }
+
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+            enabled = hasRoot,
+            onClick = onNavigateToAuto
+        ) {
+            Text(stringResource(R.string.auto_scan))
+        }
+
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+            onClick = onNavigateToSettings
+        ) {
+            Text(stringResource(R.string.settings))
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+            onClick = onNavigateToArbStats
+        ) {
+            Text(stringResource(R.string.oneplus_arb_stats))
+        }
+    }
+}
+
+class MainViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        @Suppress("UNCHECKED_CAST")
+        return MainViewModel(context) as T
     }
 }
