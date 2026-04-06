@@ -648,8 +648,10 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
             remoteCenData = null
             payloadInfo = null
             try {
-                val files = scanLocalZipForXbl(context, uri) { status ->
-                    _status.value = status
+                val files = withContext(Dispatchers.IO) {
+                    scanLocalZipForXbl(context, uri) { status ->
+                        _status.value = status
+                    }
                 }
                 _foundFiles.value = files
                 _status.value = "Found ${files.size} xbl_config file(s)"
@@ -772,73 +774,158 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
 
     private suspend fun scanLocalZipForXbl(context: Context, uri: Uri, onStatus: (String) -> Unit): List<XblFileInfo> {
         val files = mutableListOf<XblFileInfo>()
-        var entryCount = 0
-        var lastUpdate = 0L
+        var payloadBinPath: String? = null
+        var payloadBinSize: Long = 0
 
-        // First pass: search for xbl_config files in ZIP (up to 3 levels deep)
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            ZipInputStream(input).use { zis ->
-                var entry: java.util.zip.ZipEntry?
-                while (zis.nextEntry.also { entry = it } != null) {
-                    entryCount++
-                    val now = System.currentTimeMillis()
-                    if (now - lastUpdate > 500) { // Update every 500ms
-                        onStatus("Scanning ZIP... ($entryCount entries checked)")
-                        lastUpdate = now
-                    }
+        try {
+            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                ?: throw Exception("Cannot open file")
 
-                    val name = entry!!.name
-                    // Check if file contains xbl_config and is not a directory
-                    if (name.contains("xbl_config", ignoreCase = true) && !name.endsWith("/")) {
-                        // Count directory depth (number of '/' characters)
-                        val depth = name.count { it == '/' }
-                        if (depth <= 3) {
-                            files.add(XblFileInfo(
-                                name = name.substringAfterLast("/"),
-                                path = name,
-                                size = entry!!.size,
-                                source = "local",
-                                description = "ZIP entry (${depth} level${if (depth != 1) "s" else ""} deep)"
-                            ))
-                        }
-                    }
+            val inputStream = java.io.FileInputStream(pfd.fileDescriptor)
+            val channel = inputStream.channel
+            val fileLength = channel.size()
+            android.util.Log.d("XblExtractor", "Local ZIP size: $fileLength bytes")
+
+            // Read last 4096 bytes to find Central Directory
+            val readSize = minOf(4096L, fileLength).toInt()
+            val tailBuffer = java.nio.ByteBuffer.allocate(readSize)
+            channel.position(fileLength - readSize)
+            channel.read(tailBuffer)
+            tailBuffer.flip()
+
+            val tailData = tailBuffer.array()
+            val cenInfo = ZipUtil.locateCentralDirectory(tailData, fileLength)
+            if (cenInfo.offset < 0) throw Exception("Cannot find ZIP Central Directory")
+
+            // Read Central Directory
+            val cenData = ByteArray(cenInfo.size.toInt())
+            channel.position(cenInfo.offset)
+            channel.read(java.nio.ByteBuffer.wrap(cenData))
+            inputStream.close()
+            pfd.close()
+
+            onStatus("Parsing ZIP structure...")
+
+            // Parse Central Directory entries
+            val cenBuffer = java.nio.ByteBuffer.wrap(cenData)
+            val allFiles = ZipUtil.findAllFilesInCentralDirectory(cenBuffer)
+            android.util.Log.d("XblExtractor", "Total files in ZIP: ${allFiles.size}")
+
+            // Find xbl_config files and payload.bin
+            for (f in allFiles) {
+                val depth = f.path.count { it == '/' }
+                if (depth > 3) continue
+
+                if (f.path.contains("xbl_config", ignoreCase = true) && !f.path.endsWith("/")) {
+                    files.add(XblFileInfo(
+                        name = f.path.substringAfterLast("/"),
+                        path = f.path,
+                        size = f.compressedSize,
+                        source = "local",
+                        description = "ZIP entry (${depth} level${if (depth != 1) "s" else ""} deep)"
+                    ))
+                }
+
+                if (f.path.endsWith("payload.bin") && !f.path.endsWith("/")) {
+                    payloadBinPath = f.path
+                    payloadBinSize = f.compressedSize
                 }
             }
+
+            // Parse payload.bin to find xbl_config partition
+            if (payloadBinPath != null) {
+                onStatus("Extracting and parsing payload.bin...")
+                try {
+                    val partitions = parsePayloadBinFromZip(context, uri, payloadBinPath!!)
+                    if (partitions.isNotEmpty()) {
+                        files.addAll(partitions)
+                        onStatus("Found ${partitions.size} xbl_config partition(s) in payload.bin")
+                    } else {
+                        onStatus("payload.bin parsed, no xbl_config partition found")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.d("XblExtractor", "Failed to parse payload.bin: ${e.message}")
+                    onStatus("payload.bin parse failed: ${e.message}")
+                }
+            }
+
+            if (files.isEmpty()) {
+                onStatus("No xbl_config files found")
+            } else {
+                onStatus("Found ${files.size} file(s)")
+            }
+
+        } catch (e: Exception) {
+            android.util.Log.d("XblExtractor", "scanLocalZipForXbl failed: ${e.message}", e)
+            throw e
         }
 
-        // Second pass: search for .bin files and try to find xbl_config inside them
-        if (files.isEmpty()) {
+        return files
+    }
+
+    private suspend fun parsePayloadBinFromZip(
+        context: Context,
+        uri: Uri,
+        payloadBinPath: String
+    ): List<XblFileInfo> {
+        // Extract payload.bin to temp file
+        val tempFile = File(context.cacheDir, "temp_pl_${System.currentTimeMillis()}.bin")
+        try {
             context.contentResolver.openInputStream(uri)?.use { input ->
                 ZipInputStream(input).use { zis ->
                     var entry: java.util.zip.ZipEntry?
                     while (zis.nextEntry.also { entry = it } != null) {
-                        entryCount++
-                        val now = System.currentTimeMillis()
-                        if (now - lastUpdate > 500) { // Update every 500ms
-                            onStatus("Scanning for .bin files... ($entryCount entries checked)")
-                            lastUpdate = now
-                        }
-
-                        val name = entry!!.name
-                        if (name.endsWith(".bin") && !name.endsWith("/")) {
-                            // Try to parse as payload.bin
-                            val depth = name.count { it == '/' }
-                            if (depth <= 3) {
-                                files.add(XblFileInfo(
-                                    name = name.substringAfterLast("/"),
-                                    path = name,
-                                    size = entry!!.size,
-                                    source = "bin",
-                                    description = "Binary file (may contain xbl_config partition)"
-                                ))
-                            }
+                        if (entry!!.name == payloadBinPath) {
+                            tempFile.outputStream().use { output -> zis.copyTo(output) }
+                            break
                         }
                     }
                 }
             }
-        }
 
-        return files
+            if (!tempFile.exists()) return emptyList()
+
+            // Parse payload header
+            java.io.RandomAccessFile(tempFile, "r").use { raf ->
+                if (raf.length() < 24) return emptyList()
+                raf.seek(0)
+                val magic = ByteArray(4)
+                raf.readFully(magic)
+                if (String(magic, Charsets.UTF_8) != "CrAU") return emptyList()
+
+                raf.seek(4)
+                val formatVersion = raf.readLong()
+                if (formatVersion != 2L) return emptyList()
+
+                val manifestSize = raf.readLong()
+                if (manifestSize <= 0 || manifestSize > 100 * 1024 * 1024) return emptyList()
+
+                val metadataSignatureSize = raf.readInt()
+                val manifestData = ByteArray(manifestSize.toInt())
+                raf.readFully(manifestData)
+
+                val parsedManifest = chromeos_update_engine.UpdateMetadata.DeltaArchiveManifest.parseFrom(manifestData)
+
+                val xblFiles = mutableListOf<XblFileInfo>()
+                parsedManifest.partitionsList.forEach { partition ->
+                    if (partition.partitionName.equals("xbl_config", ignoreCase = true)) {
+                        xblFiles.add(XblFileInfo(
+                            name = "xbl_config",
+                            path = payloadBinPath,
+                            size = partition.newPartitionInfo.size,
+                            source = "payload",
+                            description = "Partition in payload.bin"
+                        ))
+                    }
+                }
+                return xblFiles
+            }
+        } catch (e: Exception) {
+            android.util.Log.d("XblExtractor", "parsePayloadBinFromZip failed: ${e.message}", e)
+            return emptyList()
+        } finally {
+            tempFile.delete()
+        }
     }
 
     private suspend fun scanRemoteZipForXbl(url: String): Tuple4<ZipArchiveInfo, List<XblFileInfo>, ByteArray, PayloadUtil.PayloadInfo?> {
@@ -932,7 +1019,15 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
         return when (file.source) {
             "local" -> if (localZipUri != null) extractFromLocalZip(file, outputDir) else null
             "remote" -> if (remoteZipUrl != null) extractFromRemoteZip(file, outputDir) else null
-            "payload" -> if (remoteZipUrl != null && payloadInfo != null) extractFromPayload(file, outputDir) else null
+            "payload" -> {
+                if (remoteZipUrl != null && payloadInfo != null) {
+                    extractFromPayload(file, outputDir)
+                } else if (localZipUri != null) {
+                    extractFromLocalPayload(file, outputDir)
+                } else {
+                    null
+                }
+            }
             else -> null
         }
     }
@@ -971,6 +1066,67 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
                 FileOutputStream(outFile).use { it.write(fileData) }
                 return outFile
             } catch (e: Exception) {
+                return null
+            }
+        }
+        return null
+    }
+
+    private suspend fun extractFromLocalPayload(file: XblFileInfo, outputDir: File): File? {
+        val outFile = File(outputDir, file.name)
+        localZipUri?.let { uri ->
+            try {
+                // Extract payload.bin to temp file
+                val tempPayload = File(context.cacheDir, "temp_pl_${System.currentTimeMillis()}.bin")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    ZipInputStream(input).use { zis ->
+                        var entry: java.util.zip.ZipEntry?
+                        while (zis.nextEntry.also { entry = it } != null) {
+                            if (entry!!.name == file.path) {
+                                tempPayload.outputStream().use { output -> zis.copyTo(output) }
+                                break
+                            }
+                        }
+                    }
+                }
+                if (!tempPayload.exists()) return@let null
+
+                java.io.RandomAccessFile(tempPayload, "r").use { raf ->
+                    raf.seek(4)
+                    val formatVersion = raf.readLong()
+                    val manifestSize = raf.readLong()
+                    val metadataSignatureSize = raf.readInt()
+                    val manifestData = ByteArray(manifestSize.toInt())
+                    raf.readFully(manifestData)
+                    raf.skipBytes(metadataSignatureSize)
+                    val dataOffset = raf.filePointer
+
+                    val parsedManifest = chromeos_update_engine.UpdateMetadata.DeltaArchiveManifest.parseFrom(manifestData)
+                    val xblPartition = parsedManifest.partitionsList.find { it.partitionName.equals("xbl_config", ignoreCase = true) }
+                        ?: return@use null
+
+                    java.io.FileOutputStream(outFile).use { fos ->
+                        xblPartition.operationsList.forEach { op ->
+                            if (op.type.number == 6) {
+                                fos.write(ByteArray(op.dataLength.toInt()))
+                            } else if (op.dataLength > 0) {
+                                raf.seek(dataOffset + op.dataOffset)
+                                val opData = ByteArray(op.dataLength.toInt())
+                                raf.readFully(opData)
+                                when (op.type.number) {
+                                    0 -> fos.write(opData)
+                                    8 -> decompressXz(opData)?.let { fos.write(it) }
+                                    1 -> decompressBz2(opData)?.let { fos.write(it) }
+                                }
+                            }
+                        }
+                    }
+                }
+                tempPayload.delete()
+                android.util.Log.d("XblExtractor", "extractFromLocalPayload: ${outFile.length()} bytes")
+                return outFile
+            } catch (e: Exception) {
+                android.util.Log.d("XblExtractor", "extractFromLocalPayload failed: ${e.message}", e)
                 return null
             }
         }
