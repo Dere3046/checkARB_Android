@@ -1,0 +1,194 @@
+<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 背景渐变 -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0a" />
+      <stop offset="100%" stop-color="#161618" />
+    </linearGradient>
+
+    <!-- 针脚渐变 -->
+    <linearGradient id="pinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a1a1aa" />
+      <stop offset="100%" stop-color="#3f3f46" />
+    </linearGradient>
+
+    <!-- 发光滤镜 -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- 放大镜剪切路径 -->
+    <clipPath id="lensClip">
+      <circle cx="250" cy="270" r="110" />
+    </clipPath>
+
+    <!-- 芯片晶圆图案 -->
+    <pattern id="wafer" width="20" height="20" patternUnits="userSpaceOnUse">
+      <rect width="20" height="20" fill="#141414" />
+      <path d="M 0 0 L 20 0 M 0 10 L 20 10 M 0 0 L 0 20 M 10 0 L 10 20" stroke="#2a2a2a" stroke-width="1" />
+    </pattern>
+
+    <!-- CPU 内部电路图案 -->
+    <pattern id="circuitBg" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="40" height="40" fill="#1c1c1e" />
+      <path d="M 10 0 L 10 10 L 20 10" fill="none" stroke="#00e5ff" stroke-width="1" opacity="0.3" />
+      <path d="M 30 40 L 30 30 L 20 30" fill="none" stroke="#f97316" stroke-width="1" opacity="0.3" />
+      <circle cx="10" cy="10" r="1.5" fill="#00e5ff" opacity="0.3" />
+      <circle cx="30" cy="30" r="1.5" fill="#f97316" opacity="0.3" />
+    </pattern>
+
+    <!-- 箭头标记 -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316" />
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="500" height="500" fill="url(#bgGrad)" />
+
+  <!-- ================= CPU 主体 ================= -->
+  <g id="cpu">
+    <!-- 顶部针脚 -->
+    <g fill="url(#pinGrad)" stroke="#1c1c1e" stroke-width="1">
+      <rect x="110" y="95" width="16" height="8" rx="2" />
+      <rect x="150" y="95" width="16" height="8" rx="2" />
+      <rect x="190" y="95" width="16" height="8" rx="2" />
+      <rect x="230" y="95" width="16" height="8" rx="2" />
+      <rect x="270" y="95" width="16" height="8" rx="2" />
+      <rect x="310" y="95" width="16" height="8" rx="2" />
+      <rect x="350" y="95" width="16" height="8" rx="2" />
+      <rect x="390" y="95" width="16" height="8" rx="2" />
+    </g>
+
+    <!-- 底部针脚 -->
+    <g fill="url(#pinGrad)" stroke="#1c1c1e" stroke-width="1">
+      <rect x="110" y="447" width="16" height="8" rx="2" />
+      <rect x="150" y="447" width="16" height="8" rx="2" />
+      <rect x="190" y="447" width="16" height="8" rx="2" />
+      <rect x="230" y="447" width="16" height="8" rx="2" />
+      <rect x="270" y="447" width="16" height="8" rx="2" />
+      <rect x="310" y="447" width="16" height="8" rx="2" />
+      <rect x="350" y="447" width="16" height="8" rx="2" />
+      <rect x="390" y="447" width="16" height="8" rx="2" />
+    </g>
+
+    <!-- 左侧针脚 -->
+    <g fill="url(#pinGrad)" stroke="#1c1c1e" stroke-width="1">
+      <rect x="80" y="130" width="8" height="16" rx="2" />
+      <rect x="80" y="170" width="8" height="16" rx="2" />
+      <rect x="80" y="210" width="8" height="16" rx="2" />
+      <rect x="80" y="250" width="8" height="16" rx="2" />
+      <rect x="80" y="290" width="8" height="16" rx="2" />
+      <rect x="80" y="330" width="8" height="16" rx="2" />
+      <rect x="80" y="370" width="8" height="16" rx="2" />
+      <rect x="80" y="410" width="8" height="16" rx="2" />
+    </g>
+
+    <!-- 右侧针脚 -->
+    <g fill="url(#pinGrad)" stroke="#1c1c1e" stroke-width="1">
+      <rect x="412" y="130" width="8" height="16" rx="2" />
+      <rect x="412" y="170" width="8" height="16" rx="2" />
+      <rect x="412" y="210" width="8" height="16" rx="2" />
+      <rect x="412" y="250" width="8" height="16" rx="2" />
+      <rect x="412" y="290" width="8" height="16" rx="2" />
+      <rect x="412" y="330" width="8" height="16" rx="2" />
+      <rect x="412" y="370" width="8" height="16" rx="2" />
+      <rect x="412" y="410" width="8" height="16" rx="2" />
+    </g>
+
+    <!-- CPU 正方形外壳 -->
+    <rect x="90" y="110" width="320" height="320" rx="16" fill="#1c1c1e" stroke="#3a3a3c" stroke-width="6" />
+    
+    <!-- CPU 内核区域 -->
+    <rect x="110" y="130" width="280" height="280" rx="8" fill="url(#circuitBg)" stroke="#4a4a4c" stroke-width="3" />
+
+    <!-- 科技感电路走线 -->
+    <g opacity="0.7">
+      <!-- 主数据总线 -->
+      <path d="M 130 150 L 200 150 L 220 170" fill="none" stroke="#00e5ff" stroke-width="2" />
+      <path d="M 370 150 L 300 150 L 280 170" fill="none" stroke="#00e5ff" stroke-width="2" />
+      <path d="M 130 390 L 190 390 L 210 370" fill="none" stroke="#00e5ff" stroke-width="2" />
+      <path d="M 370 390 L 310 390 L 290 370" fill="none" stroke="#00e5ff" stroke-width="2" />
+      
+      <!-- 控制总线 -->
+      <path d="M 170 130 L 170 180 L 200 200" fill="none" stroke="#f97316" stroke-width="2" />
+      <path d="M 330 130 L 330 180 L 300 200" fill="none" stroke="#f97316" stroke-width="2" />
+      <path d="M 170 410 L 170 360 L 200 340" fill="none" stroke="#f97316" stroke-width="2" />
+      <path d="M 330 410 L 330 360 L 300 340" fill="none" stroke="#f97316" stroke-width="2" />
+
+      <!-- 微型晶体管节点 -->
+      <circle cx="220" cy="170" r="3" fill="#00e5ff" />
+      <circle cx="280" cy="170" r="3" fill="#00e5ff" />
+      <circle cx="210" cy="370" r="3" fill="#00e5ff" />
+      <circle cx="290" cy="370" r="3" fill="#00e5ff" />
+      <circle cx="200" cy="200" r="3" fill="#f97316" />
+      <circle cx="300" cy="200" r="3" fill="#f97316" />
+      <circle cx="200" cy="340" r="3" fill="#f97316" />
+      <circle cx="300" cy="340" r="3" fill="#f97316" />
+    </g>
+
+    <!-- CPU 装饰文字 -->
+    <text x="130" y="385" font-family="'Courier New', Courier, monospace" font-size="12" fill="#6e7681" opacity="0.8">CORE-X9</text>
+    <text x="130" y="400" font-family="'Courier New', Courier, monospace" font-size="10" fill="#6e7681" opacity="0.8">2.5 GHZ</text>
+    <text x="370" y="145" font-family="'Courier New', Courier, monospace" font-size="12" fill="#6e7681" opacity="0.8" text-anchor="end">REV 4.0</text>
+
+    <!-- 被放大的微型 ARB 核心 -->
+    <rect x="230" y="200" width="40" height="40" rx="6" fill="#1a1a1c" stroke="#f97316" stroke-width="2" />
+    <text x="250" y="220" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f97316" text-anchor="middle" dominant-baseline="central">ARB</text>
+  </g>
+
+  <!-- ================= 放大镜 ================= -->
+  <g id="magnifying-glass">
+    <!-- 聚焦光线（从微型 ARB 指向放大镜） -->
+    <g opacity="0.8">
+      <path d="M 250 240 L 250 160" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow)" />
+      <path d="M 240 245 L 220 170" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow)" />
+      <path d="M 260 245 L 280 170" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow)" />
+    </g>
+
+    <!-- 放大效果内容（受剪切路径限制） -->
+    <g clip-path="url(#lensClip)">
+      <!-- 放大的晶圆底纹 -->
+      <rect x="150" y="170" width="200" height="200" fill="url(#wafer)" />
+      
+      <!-- 放大的电路走线 -->
+      <path d="M 140 210 L 360 210 M 140 270 L 360 270 M 200 160 L 200 380 M 300 160 L 300 380" stroke="#00e5ff" stroke-width="6" opacity="0.3" />
+      <path d="M 160 180 L 340 180 M 160 300 L 340 300 M 240 160 L 240 380 M 280 160 L 280 380" stroke="#f97316" stroke-width="3" opacity="0.4" />
+
+      <!-- 放大的微型晶体管 -->
+      <g opacity="0.9">
+        <rect x="170" y="190" width="16" height="16" fill="#00e5ff" />
+        <rect x="320" y="330" width="16" height="16" fill="#00e5ff" />
+        <rect x="180" y="340" width="16" height="16" fill="#f97316" />
+        <rect x="310" y="190" width="16" height="16" fill="#f97316" />
+        <rect x="220" y="180" width="16" height="16" fill="#00e5ff" />
+        <rect x="270" y="340" width="16" height="16" fill="#00e5ff" />
+      </g>
+
+      <!-- 放大的 ARB 文字背景光晕 -->
+      <rect x="150" y="230" width="200" height="80" fill="#f97316" opacity="0.15" filter="url(#strongGlow)" />
+
+      <!-- 放大的 ARB 核心外框 -->
+      <rect x="160" y="240" width="180" height="60" rx="12" fill="#1a1a1c" stroke="#f97316" stroke-width="4" filter="url(#glow)" />
+
+      <!-- 放大的 ARB 文字 -->
+      <text x="250" y="270" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="900" fill="#f97316" stroke="#ffffff" stroke-width="3" paint-order="stroke fill" text-anchor="middle" dominant-baseline="central" filter="url(#strongGlow)">ARB</text>
+    </g>
+
+    <!-- 放大镜框 -->
+    <circle cx="250" cy="270" r="110" fill="none" stroke="#d4d4d8" stroke-width="16" />
+    <!-- 镜框内阴影/厚度 -->
+    <circle cx="250" cy="270" r="102" fill="none" stroke="#3a3a3c" stroke-width="4" />
+    <circle cx="250" cy="270" r="118" fill="none" stroke="#6e7681" stroke-width="2" opacity="0.5" />
+
+    <!-- 镜片玻璃高光反射 -->
+    <ellipse cx="200" cy="210" rx="45" ry="20" fill="#ffffff" opacity="0.15" transform="rotate(-35 200 210)" />
+    <ellipse cx="220" cy="200" rx="20" ry="10" fill="#ffffff" opacity="0.25" transform="rotate(-35 220 200)" />
+  </g>
+</svg>
