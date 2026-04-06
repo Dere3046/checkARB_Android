@@ -642,16 +642,20 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
             _isProcessing.value = true
             _error.value = null
             _scanResults.value = emptyList()
+            _status.value = "Scanning local file..."
             localZipUri = uri
             remoteZipUrl = null
             remoteCenData = null
             payloadInfo = null
             try {
-                val files = withContext(Dispatchers.IO) { scanLocalZipForXbl(context, uri) }
+                val files = scanLocalZipForXbl(context, uri) { status ->
+                    _status.value = status
+                }
                 _foundFiles.value = files
                 _status.value = "Found ${files.size} xbl_config file(s)"
             } catch (e: Exception) {
                 _error.value = "Failed to scan: ${e.message}"
+                _status.value = null
             } finally {
                 _isProcessing.value = false
             }
@@ -766,14 +770,23 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
         }
     }
 
-    private fun scanLocalZipForXbl(context: Context, uri: Uri): List<XblFileInfo> {
+    private suspend fun scanLocalZipForXbl(context: Context, uri: Uri, onStatus: (String) -> Unit): List<XblFileInfo> {
         val files = mutableListOf<XblFileInfo>()
-        
+        var entryCount = 0
+        var lastUpdate = 0L
+
         // First pass: search for xbl_config files in ZIP (up to 3 levels deep)
         context.contentResolver.openInputStream(uri)?.use { input ->
             ZipInputStream(input).use { zis ->
                 var entry: java.util.zip.ZipEntry?
                 while (zis.nextEntry.also { entry = it } != null) {
+                    entryCount++
+                    val now = System.currentTimeMillis()
+                    if (now - lastUpdate > 500) { // Update every 500ms
+                        onStatus("Scanning ZIP... ($entryCount entries checked)")
+                        lastUpdate = now
+                    }
+
                     val name = entry!!.name
                     // Check if file contains xbl_config and is not a directory
                     if (name.contains("xbl_config", ignoreCase = true) && !name.endsWith("/")) {
@@ -792,13 +805,20 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
                 }
             }
         }
-        
+
         // Second pass: search for .bin files and try to find xbl_config inside them
         if (files.isEmpty()) {
             context.contentResolver.openInputStream(uri)?.use { input ->
                 ZipInputStream(input).use { zis ->
                     var entry: java.util.zip.ZipEntry?
                     while (zis.nextEntry.also { entry = it } != null) {
+                        entryCount++
+                        val now = System.currentTimeMillis()
+                        if (now - lastUpdate > 500) { // Update every 500ms
+                            onStatus("Scanning for .bin files... ($entryCount entries checked)")
+                            lastUpdate = now
+                        }
+
                         val name = entry!!.name
                         if (name.endsWith(".bin") && !name.endsWith("/")) {
                             // Try to parse as payload.bin
@@ -817,7 +837,7 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
                 }
             }
         }
-        
+
         return files
     }
 
