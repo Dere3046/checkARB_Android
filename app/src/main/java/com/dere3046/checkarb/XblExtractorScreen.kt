@@ -167,25 +167,40 @@ fun XblExtractorScreen(
                     ),
                     onClick = { viewModel.toggleFileSelection(index) }
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(12.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = file.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "${file.source} - ${formatSize(file.size)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = file.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = file.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (file.path != file.name) {
+                                    Text(
+                                        text = "Path: ${file.path}",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "${file.source} - ${formatSize(file.size)}",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                                )
+                            }
+                            Checkbox(checked = isSelected, onCheckedChange = { viewModel.toggleFileSelection(index) })
                         }
-                        Checkbox(checked = isSelected, onCheckedChange = { viewModel.toggleFileSelection(index) })
                     }
                 }
             }
@@ -269,6 +284,19 @@ fun XblExtractorScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(text = "Version: ${result.result?.major}.${result.result?.minor}", style = MaterialTheme.typography.bodySmall)
+                            
+                            // Show debug messages if available
+                            if (!result.result?.debugMessages.isNullOrEmpty()) {
+                                Text(text = "Debug Info:", style = MaterialTheme.typography.bodySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                result.result?.debugMessages?.forEach { msg ->
+                                    Text(
+                                        text = msg,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
                     }
                 }

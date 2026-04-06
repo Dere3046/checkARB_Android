@@ -29,7 +29,8 @@ data class XblFileInfo(
     val source: String,
     val localHeaderOffset: Long = -1,
     val payloadOffset: Long = -1,
-    val compressedSize: Long = 0
+    val compressedSize: Long = 0,
+    val description: String = ""
 )
 
 data class XblScanResult(
@@ -758,30 +759,56 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
 
     private fun scanLocalZipForXbl(context: Context, uri: Uri): List<XblFileInfo> {
         val files = mutableListOf<XblFileInfo>()
+        
+        // First pass: search for xbl_config files in ZIP (up to 3 levels deep)
         context.contentResolver.openInputStream(uri)?.use { input ->
             ZipInputStream(input).use { zis ->
                 var entry: java.util.zip.ZipEntry?
                 while (zis.nextEntry.also { entry = it } != null) {
                     val name = entry!!.name
+                    // Check if file contains xbl_config and is not a directory
                     if (name.contains("xbl_config", ignoreCase = true) && !name.endsWith("/")) {
-                        files.add(XblFileInfo(name.substringAfterLast("/"), name, entry!!.size, "local"))
-                    }
-                }
-            }
-        }
-        if (files.isEmpty()) {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                ZipInputStream(input).use { zis ->
-                    var entry: java.util.zip.ZipEntry?
-                    while (zis.nextEntry.also { entry = it } != null) {
-                        if (entry!!.name == "payload.bin") {
-                            files.add(XblFileInfo("payload.bin", "payload.bin", entry!!.size, "payload"))
-                            break
+                        // Count directory depth (number of '/' characters)
+                        val depth = name.count { it == '/' }
+                        if (depth <= 3) {
+                            files.add(XblFileInfo(
+                                name = name.substringAfterLast("/"),
+                                path = name,
+                                size = entry!!.size,
+                                source = "local",
+                                description = "ZIP entry (${depth} level${if (depth != 1) "s" else ""} deep)"
+                            ))
                         }
                     }
                 }
             }
         }
+        
+        // Second pass: search for .bin files and try to find xbl_config inside them
+        if (files.isEmpty()) {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                ZipInputStream(input).use { zis ->
+                    var entry: java.util.zip.ZipEntry?
+                    while (zis.nextEntry.also { entry = it } != null) {
+                        val name = entry!!.name
+                        if (name.endsWith(".bin") && !name.endsWith("/")) {
+                            // Try to parse as payload.bin
+                            val depth = name.count { it == '/' }
+                            if (depth <= 3) {
+                                files.add(XblFileInfo(
+                                    name = name.substringAfterLast("/"),
+                                    path = name,
+                                    size = entry!!.size,
+                                    source = "bin",
+                                    description = "Binary file (may contain xbl_config partition)"
+                                ))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         return files
     }
 
