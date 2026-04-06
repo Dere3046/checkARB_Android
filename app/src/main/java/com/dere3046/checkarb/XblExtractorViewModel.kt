@@ -693,31 +693,40 @@ class XblExtractorViewModel(application: android.app.Application) : AndroidViewM
         viewModelScope.launch {
             _isProcessing.value = true
             _error.value = null
+            _scanResults.value = emptyList()
             val results = mutableListOf<XblScanResult>()
             val outputDir = File(context.cacheDir, "xbl_temp")
             if (!outputDir.exists()) outputDir.mkdirs()
 
+            _status.value = "Starting extraction..."
+
             selected.forEachIndexed { idx, fileIdx ->
                 if (fileIdx < files.size) {
                     val file = files[fileIdx]
-                    _status.value = "Processing ${file.name} (${idx + 1}/${selected.size})..."
+                    _status.value = "Extracting file ${idx + 1}/${selected.size}: ${file.name}"
                     try {
                         val tempFile = withContext(Dispatchers.IO) {
                             extractSingleFile(file, outputDir)
                         }
                         if (tempFile != null) {
+                            _status.value = "Scanning ${file.name}..."
                             val arbResult = ArbInspector.extractWithMode(tempFile.absolutePath, fullMode, debug)
                             results.add(XblScanResult(file.name, arbResult))
                             tempFile.delete()
+                            _status.value = "Completed ${idx + 1}/${selected.size}"
+                        } else {
+                            _status.value = "Failed to extract ${file.name}"
+                            results.add(XblScanResult(file.name, ArbResult().apply { error = "Extraction failed" }))
                         }
                     } catch (e: Exception) {
+                        _status.value = "Error: ${e.message}"
                         results.add(XblScanResult(file.name, ArbResult().apply { error = e.message }))
                     }
                 }
             }
 
             _scanResults.value = results
-            _status.value = "Scan complete"
+            _status.value = "Extraction complete - ${results.size} file(s) processed"
             _isProcessing.value = false
         }
     }
