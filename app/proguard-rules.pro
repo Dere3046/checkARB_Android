@@ -35,6 +35,11 @@
 -keepclassmembers class androidx.compose.** { *; }
 -keep class androidx.lifecycle.** { *; }
 
+# protobuf generated classes
+-keep class chromeos_update_engine.** { *; }
+-keepclassmembers class chromeos_update_engine.** { *; }
+-dontwarn chromeos_update_engine.**
+
 # libsu
 -keep class com.topjohnwu.superuser.** { *; }
 -dontwarn com.topjohnwu.superuser.**
