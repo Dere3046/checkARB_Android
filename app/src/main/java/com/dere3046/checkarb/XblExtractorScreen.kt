@@ -39,7 +39,6 @@ fun XblExtractorScreen(
 
     var inputMode by remember { mutableStateOf(InputMode.LOCAL) }
     var remoteUrl by remember { mutableStateOf("") }
-    var fullMode by remember { mutableStateOf(true) }
     var debugMode by remember { mutableStateOf(true) }
     var showResults by remember { mutableStateOf(false) }
 
@@ -196,7 +195,7 @@ fun XblExtractorScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { showResults = false; viewModel.extractAndScanSelected(fullMode, debugMode) },
+                    onClick = { showResults = false; viewModel.extractAndScanSelected(fullMode = true, debug = debugMode) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
                     enabled = selectedFiles.isNotEmpty() && !isProcessing
@@ -217,10 +216,9 @@ fun XblExtractorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Checkbox(checked = fullMode, onCheckedChange = { fullMode = it })
-                Text(stringResource(R.string.full_mode), modifier = Modifier.align(Alignment.CenterVertically))
                 Checkbox(checked = debugMode, onCheckedChange = { debugMode = it })
                 Text(stringResource(R.string.debug_mode), modifier = Modifier.align(Alignment.CenterVertically))
+                Text(" (Full mode always enabled)", style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.CenterVertically))
             }
         }
 

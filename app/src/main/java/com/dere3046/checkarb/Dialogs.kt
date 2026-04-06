@@ -92,7 +92,8 @@ fun TargetDeviceDialog(
 fun SettingsDialog(
     onDismiss: () -> Unit,
     context: Context,
-    hasRoot: Boolean
+    hasRoot: Boolean,
+    onShowLicenses: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
     val repository = remember { SettingsRepository(context) }
@@ -179,6 +180,16 @@ fun SettingsDialog(
                     shape = RoundedCornerShape(BUTTON_CORNER_RADIUS)
                 ) {
                     Text(stringResource(R.string.close))
+                }
+
+                if (onShowLicenses != null) {
+                    OutlinedButton(
+                        onClick = onShowLicenses,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(BUTTON_CORNER_RADIUS)
+                    ) {
+                        Text("Open Source Licenses")
+                    }
                 }
             }
         }

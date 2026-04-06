@@ -39,6 +39,7 @@ fun MainScreen(
     var showTargetDeviceDialogForSlot by remember { mutableStateOf<String?>(null) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showArbStatsDialog by remember { mutableStateOf(false) }
+    var showLicensesDialog by remember { mutableStateOf(false) }
 
     val currentRoute = navController.currentBackStackEntryFlow.collectAsState(initial = navController.currentBackStackEntry).value?.destination?.route
 
@@ -102,7 +103,11 @@ fun MainScreen(
                 SettingsDialog(
                     onDismiss = { showSettingsDialog = false },
                     context = context,
-                    hasRoot = hasRoot
+                    hasRoot = hasRoot,
+                    onShowLicenses = {
+                        showSettingsDialog = false
+                        showLicensesDialog = true
+                    }
                 )
             }
 
@@ -146,6 +151,10 @@ fun MainScreen(
                         }
                     }
                 )
+            }
+
+            if (showLicensesDialog) {
+                LicensesDialog(onDismiss = { showLicensesDialog = false })
             }
         }
     }
