@@ -158,7 +158,9 @@ fun MainScreenContent(
     onNavigateToAuto: () -> Unit,
     onNavigateToDetail: (MainViewModel.SlotInfo) -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToArbStats: () -> Unit
+    onNavigateToArbStats: () -> Unit,
+    onNavigateToArbDatabase: () -> Unit,
+    onNavigateToXblExtractor: () -> Unit
 ) {
     val deviceInfo by viewModel.deviceInfo.collectAsState()
     val slotA by viewModel.slotA.collectAsState()
@@ -181,6 +183,11 @@ fun MainScreenContent(
             DataRow(
                 label = stringResource(R.string.kernel_version),
                 value = deviceInfo.kernelVersion,
+                mutableMaxWidth = cardWidth
+            )
+            DataRow(
+                label = stringResource(R.string.arb_inspector_version),
+                value = deviceInfo.arbInspectorVersion,
                 mutableMaxWidth = cardWidth
             )
             if (deviceInfo.isDualSlot) {
@@ -236,6 +243,22 @@ fun MainScreenContent(
             onClick = onNavigateToSettings
         ) {
             Text(stringResource(R.string.settings))
+        }
+
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+            onClick = onNavigateToArbDatabase
+        ) {
+            Text(stringResource(R.string.check_arb_online))
+        }
+
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
+            onClick = onNavigateToXblExtractor
+        ) {
+            Text(stringResource(R.string.xbl_extractor))
         }
 
         Spacer(Modifier.height(8.dp))

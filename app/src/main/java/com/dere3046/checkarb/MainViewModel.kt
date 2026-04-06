@@ -33,7 +33,8 @@ class MainViewModel(private val context: Context) : ViewModel() {
         val arbInspectorVersion: String = "",
         val isDualSlot: Boolean = false,
         val activeSlot: String = "",
-        val slotSuffix: String = ""
+        val slotSuffix: String = "",
+        val hasTargetPartition: Boolean = false
     )
 
     private val _deviceInfo = MutableStateFlow(DeviceInfo())
@@ -58,6 +59,9 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     private val _hasRootAccess = MutableStateFlow(false)
     val hasRootAccess: StateFlow<Boolean> = _hasRootAccess.asStateFlow()
+
+    private val _hasTargetPartition = MutableStateFlow(false)
+    val hasTargetPartition: StateFlow<Boolean> = _hasTargetPartition.asStateFlow()
 
     private val _autoScanResult = MutableStateFlow<ArbResult?>(null)
     val autoScanResult: StateFlow<ArbResult?> = _autoScanResult.asStateFlow()
@@ -101,28 +105,36 @@ class MainViewModel(private val context: Context) : ViewModel() {
     }
 
     private fun loadDeviceInfo() {
-        val kernelVersion = System.getProperty("os.version") ?: "unknown"
-        
-        val version = try {
-            ArbInspector.getVersion()
-        } catch (e: UnsatisfiedLinkError) {
-            "JNI error"
-        } catch (e: Exception) {
-            "error"
-        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val kernelVersion = System.getProperty("os.version") ?: "unknown"
 
-        val slotSuffix = getSlotSuffix()
-        val isDual = slotSuffix.isNotEmpty()
-        val active = if (isDual) slotSuffix else ""
+            val version = try {
+                ArbInspector.getVersion()
+            } catch (e: UnsatisfiedLinkError) {
+                "JNI error"
+            } catch (e: Exception) {
+                "error"
+            }
 
-        _deviceInfo.update {
-            DeviceInfo(
-                kernelVersion = kernelVersion,
-                arbInspectorVersion = version,
-                isDualSlot = isDual,
-                activeSlot = active,
-                slotSuffix = slotSuffix
-            )
+            val slotSuffix = getSlotSuffix()
+            val isDual = slotSuffix.isNotEmpty()
+            val active = if (isDual) slotSuffix else ""
+
+            val hasTarget = DeviceUtils.hasTargetPartition()
+            _hasTargetPartition.update { hasTarget }
+
+            _deviceInfo.update {
+                DeviceInfo(
+                    model = Build.MODEL,
+                    buildNumber = Build.ID,
+                    kernelVersion = kernelVersion,
+                    arbInspectorVersion = version,
+                    isDualSlot = isDual,
+                    activeSlot = active,
+                    slotSuffix = slotSuffix,
+                    hasTargetPartition = hasTarget
+                )
+            }
         }
     }
 

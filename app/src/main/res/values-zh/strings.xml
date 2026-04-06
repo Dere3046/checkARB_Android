@@ -124,7 +124,31 @@
     <string name="block_mode">块设备模式</string>
     <string name="scan_result">结果: %1$d.%2$d (ARB=%3$d)</string>
     <string name="scan_failed_detail">扫描失败: 无结果</string>
-    <string name="oneplus_arb_stats">一加熔断统计</string>  
-    <string name="arb_stats_disclaimer">这个项目不由我维护。请不要提交错误报告。</string>  
-    <string name="navigate">前往</string>  
-</resources>  
+    <string name="oneplus_arb_stats">一加熔断统计</string>
+    <string name="arb_stats_disclaimer">这个项目不由我维护。请不要提交错误报告。</string>
+    <string name="navigate">前往</string>
+    <string name="check_arb_online">在线查询 ARB</string>
+    <string name="xbl_extractor">从刷机包中提取</string>
+    <string name="check_this_device">检测当前设备</string>
+    <string name="check_other_devices">检测其他设备</string>
+    <string name="search_devices">搜索设备...</string>
+    <string name="version">版本</string>
+    <string name="regions">地区</string>
+    <string name="status">状态</string>
+    <string name="first">首次</string>
+    <string name="last">最后</string>
+    <string name="rom_url_hint">ROM ZIP 链接（.zip 文件的直链）</string>
+    <string name="local_zip">本地 ZIP</string>
+    <string name="remote_url">远程 URL</string>
+    <string name="select_zip">选择 ZIP</string>
+    <string name="scan_remote">扫描远程</string>
+    <string name="select_all">全选</string>
+    <string name="clear_selection">清除</string>
+    <string name="scan_selected">扫描已选</string>
+    <string name="save_selected">保存到本地</string>
+    <string name="view_results">查看结果 (%d)</string>
+    <string name="select_save_folder">选择保存文件夹（可选）</string>
+    <string name="archive_info">归档信息</string>
+    <string name="file_name">文件名</string>
+    <string name="file_size">文件大小</string>
+</resources>

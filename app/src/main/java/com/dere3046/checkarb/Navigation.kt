@@ -15,6 +15,8 @@ sealed class Screen(val route: String) {
     object Detail : Screen("detail/{slotSuffix}") {
         fun createRoute(slotSuffix: String) = "detail/$slotSuffix"
     }
+    object ArbDatabase : Screen("arb_database")
+    object XblExtractor : Screen("xbl_extractor")
 }
 
 @Composable
@@ -43,7 +45,13 @@ fun AppNavigation(
                     navController.navigate(Screen.Detail.createRoute(slot.suffix))
                 },
                 onNavigateToSettings = onNavigateToSettings,
-                onNavigateToArbStats = onNavigateToArbStats
+                onNavigateToArbStats = onNavigateToArbStats,
+                onNavigateToArbDatabase = {
+                    navController.navigate(Screen.ArbDatabase.route)
+                },
+                onNavigateToXblExtractor = {
+                    navController.navigate(Screen.XblExtractor.route)
+                }
             )
         }
 
@@ -94,6 +102,26 @@ fun AppNavigation(
                 },
                 availableDevices = viewModel.availableDevices.value,
                 currentDevicePath = currentDevicePath
+            )
+        }
+
+        composable(Screen.ArbDatabase.route) {
+            ArbDatabaseScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.XblExtractor.route) {
+            val viewModel: XblExtractorViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                factory = XblExtractorViewModelFactory(navController.context.applicationContext as android.app.Application)
+            )
+            XblExtractorScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                viewModel = viewModel
             )
         }
     }

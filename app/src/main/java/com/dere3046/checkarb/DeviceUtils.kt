@@ -10,6 +10,26 @@ import java.io.FileOutputStream
 object DeviceUtils {
 
     /**
+     * Check if target xbl_config partition exists
+     */
+    suspend fun hasTargetPartition(): Boolean = withContext(Dispatchers.IO) {
+        val checkA = Shell.cmd("[ -e /dev/block/by-name/xbl_config_a ] && echo exists").exec()
+        val checkB = Shell.cmd("[ -e /dev/block/by-name/xbl_config_b ] && echo exists").exec()
+        val checkPlain = Shell.cmd("[ -e /dev/block/by-name/xbl_config ] && echo exists").exec()
+        checkA.out.any { it.contains("exists") } ||
+            checkB.out.any { it.contains("exists") } ||
+            checkPlain.out.any { it.contains("exists") }
+    }
+
+    /**
+     * Check if device supports A/B slots
+     */
+    suspend fun isDualSlotDevice(): Boolean = withContext(Dispatchers.IO) {
+        val result = Shell.cmd("[ -e /dev/block/by-name/xbl_config_a ] && [ -e /dev/block/by-name/xbl_config_b ] && echo dual").exec()
+        result.out.any { it.contains("dual") }
+    }
+
+    /**
      * Build standard by-name symlink path for given suffix
      */
     fun buildStandardPath(suffix: String): String = "/dev/block/by-name/xbl_config$suffix"

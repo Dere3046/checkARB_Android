@@ -1,8 +1,6 @@
 package com.dere3046.checkarb
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -72,8 +70,8 @@ fun DetailScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(stringResource(R.string.debug_messages), style = MaterialTheme.typography.titleMedium)
-                    LazyColumn {
-                        items(slotInfo.debugMessages) { msg ->
+                    Column {
+                        slotInfo.debugMessages.forEach { msg ->
                             Text(
                                 text = msg,
                                 style = MaterialTheme.typography.bodySmall,
